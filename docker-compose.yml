@@ -25,9 +25,11 @@ services:
       - "80:80"
   app:
     build:
-      context: ./docker/app/golang
-      args:
-        GIT_URL: https://github.com/TomoyukiSugiyama/isucon7-qualify.git
+      context: ./docker/app
+      #args:
+      #  GIT_URL: https://github.com/TomoyukiSugiyama/isucon7-qualify.git
+    volumes:
+      - ./docker/app/isubata:/home/isucon/isubata
     image: isucon7-qualifier-app:golang
     networks:
       - backend
