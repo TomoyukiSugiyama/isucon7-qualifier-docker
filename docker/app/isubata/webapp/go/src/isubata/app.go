@@ -97,19 +97,37 @@ func init() {
 	})
 }
 
-func getInitializeRedis() {
+func getInitializeRedis(c echo.Context) error {
+	type Image struct {
+		Name string
+		Data []byte
+	}
 
+	imgs := []Image{}
+	err := db.Select(&imgs, "SELECT name, data FROM image")
+	if err != nil {
+		return err
+	}
+	log.Printf("Loaded %d images", len(imgs))
+	rdb.FlushDB(ctx)
+	for _, img := range imgs {
+		if err := setKey(img.Name, img.Data, ctx); err != nil {
+			return err
+		}
+	}
+	log.Printf("Save %d images", len(imgs))
+	return nil
 }
 
-func getKey(key string, ctx context.Context) (string, error) {
-	res, err := rdb.Get(ctx, key).Result()
+func getKey(key string, ctx context.Context) ([]byte, error) {
+	res, err := rdb.Get(ctx, key).Bytes()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	return res, nil
 }
 
-func setKey(key, value string, ctx context.Context) error {
+func setKey(key string, value []byte, ctx context.Context) error {
 	if err := rdb.Set(ctx, key, value, 10*time.Second).Err(); err != nil {
 		return err
 	}
@@ -758,16 +776,6 @@ func main() {
 		log.Println(http.ListenAndServe(":6060", nil))
 	}()
 
-	err := setKey("key1", "value1", ctx)
-	if err != nil {
-		panic(err)
-	}
-	val, err := getKey("key1", ctx)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("key1", val)
-
 	e := echo.New()
 	funcs := template.FuncMap{
 		"add":    tAdd,
@@ -783,6 +791,7 @@ func main() {
 	e.Use(middleware.Static("../public"))
 
 	e.GET("/initialize", getInitialize)
+	e.GET("/initialize_redis", getInitializeRedis)
 	e.GET("/", getIndex)
 	e.GET("/register", getRegister)
 	e.POST("/register", postRegister)
