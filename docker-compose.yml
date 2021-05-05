@@ -33,6 +33,7 @@ services:
       - backend
     depends_on:
        - db
+       - redis
     ports:
       - "5000"
       - "6060:6060"
@@ -56,6 +57,15 @@ services:
       #MYSQL_DATABASE: isubata
       #MYSQL_USER: isucon
       #MYSQL_PASSWORD: isucon
+  redis:
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+    #volumes:
+    #  - "./data/redis:/data"
+    networks:
+      - backend
+  
 networks:
   frontend:
   backend:
