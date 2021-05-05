@@ -46,6 +46,10 @@ func (r *Renderer) Render(w io.Writer, name string, data interface{}, c echo.Con
 	return r.templates.ExecuteTemplate(w, name, data)
 }
 
+var ctx = context.Background()
+
+var rdb *redis.Client
+
 func init() {
 	seedBuf := make([]byte, 8)
 	crand.Read(seedBuf)
@@ -85,6 +89,31 @@ func init() {
 	db.SetMaxOpenConns(20)
 	db.SetConnMaxLifetime(5 * time.Minute)
 	log.Printf("Succeeded to connect db.")
+
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     "redis:6379",
+		Password: "", // no password set
+		DB:       0,  // use default DB
+	})
+}
+
+func getInitializeRedis() {
+
+}
+
+func getKey(key string, ctx context.Context) (string, error) {
+	res, err := rdb.Get(ctx, key).Result()
+	if err != nil {
+		return "", err
+	}
+	return res, nil
+}
+
+func setKey(key, value string, ctx context.Context) error {
+	if err := rdb.Set(ctx, key, value, 10*time.Second).Err(); err != nil {
+		return err
+	}
+	return nil
 }
 
 type User struct {
@@ -724,38 +753,20 @@ func tRange(a, b int64) []int64 {
 	return r
 }
 
-var ctx = context.Background()
-
 func main() {
 	go func() {
 		log.Println(http.ListenAndServe(":6060", nil))
 	}()
 
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
-	})
-
-	err := rdb.Set(ctx, "key", "value", 0).Err()
+	err := setKey("key1", "value1", ctx)
 	if err != nil {
 		panic(err)
 	}
-
-	val, err := rdb.Get(ctx, "key").Result()
+	val, err := getKey("key1", ctx)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("key", val)
-
-	val2, err := rdb.Get(ctx, "key2").Result()
-	if err == redis.Nil {
-		fmt.Println("key2 does not exist")
-	} else if err != nil {
-		panic(err)
-	} else {
-		fmt.Println("key2", val2)
-	}
+	fmt.Println("key1", val)
 
 	e := echo.New()
 	funcs := template.FuncMap{
