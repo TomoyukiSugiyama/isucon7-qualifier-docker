@@ -26,10 +26,8 @@ services:
   app:
     build:
       context: ./docker/app
-      #args:
-      #  GIT_URL: https://github.com/TomoyukiSugiyama/isucon7-qualify.git
-    #volumes:
-    #  - ./docker/app/isubata:/home/isucon/isubata
+    volumes:
+      - ./docker/app/isubata/webapp/go:/home/isucon/isubata/webapp/go
     image: isucon7-qualifier-app:golang
     networks:
       - backend
