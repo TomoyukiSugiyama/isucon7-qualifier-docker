@@ -173,13 +173,6 @@ type Message struct {
 	CreatedAt time.Time `db:"created_at"`
 }
 
-func queryMessages(chanID, lastID int64) ([]Message, error) {
-	msgs := []Message{}
-	err := db.Select(&msgs, "SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100",
-		lastID, chanID)
-	return msgs, err
-}
-
 func sessUserID(c echo.Context) int64 {
 	sess, _ := session.Get("session", c)
 	var userID int64
@@ -443,7 +436,6 @@ func getMessage(c echo.Context) error {
 
 	messages := []MessageWithUser{}
 
-	//messages, err := queryMessages(chanID, lastID)
 	err = db.Select(&messages, "SELECT m.id, m.content, m.created_at, u.name, u.display_name, u.avatar_icon FROM message m INNER JOIN user u ON u.id = m.user_id WHERE m.id > ? AND m.channel_id = ? ORDER BY m.id DESC LIMIT 100", lastID, chanID)
 
 	if err != nil {
@@ -462,18 +454,9 @@ func getMessage(c echo.Context) error {
 		}
 		r["date"] = m.CreatedAt.Format("2006/01/02 15:04:05")
 		r["content"] = m.Content
-		//r, err := jsonifyMessage(m)
-		//if err != nil {
-		//	return err
-		//}
+
 		response = append(response, r)
 	}
-
-	//r := make(map[string]interface{})
-	//r["id"] = m.ID
-	//r["user"] = u
-	//r["date"] = m.CreatedAt.Format("2006/01/02 15:04:05")
-	//r["content"] = m.Content
 
 	if len(messages) > 0 {
 		_, err := db.Exec("INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)"+
