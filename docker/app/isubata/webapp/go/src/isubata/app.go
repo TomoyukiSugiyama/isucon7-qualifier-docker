@@ -394,22 +394,6 @@ func postMessage(c echo.Context) error {
 	return c.NoContent(204)
 }
 
-func jsonifyMessage(m Message) (map[string]interface{}, error) {
-	u := User{}
-	err := db.Get(&u, "SELECT name, display_name, avatar_icon FROM user WHERE id = ?",
-		m.UserID)
-	if err != nil {
-		return nil, err
-	}
-
-	r := make(map[string]interface{})
-	r["id"] = m.ID
-	r["user"] = u
-	r["date"] = m.CreatedAt.Format("2006/01/02 15:04:05")
-	r["content"] = m.Content
-	return r, nil
-}
-
 func getMessage(c echo.Context) error {
 	userID := sessUserID(c)
 	if userID == 0 {
@@ -577,20 +561,35 @@ func getHistory(c echo.Context) error {
 		return ErrBadReqeust
 	}
 
-	messages := []Message{}
-	err = db.Select(&messages,
-		"SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
-		chID, N, (page-1)*N)
+	type MessageWithUser struct {
+		ID              int64     `db:"id"`
+		Content         string    `db:"content"`
+		CreatedAt       time.Time `db:"created_at"`
+		UserName        string    `db:"name"`
+		UserDisplayName string    `db:"display_name"`
+		UserAvatarIcon  string    `db:"avatar_icon"`
+	}
+
+	messages := []MessageWithUser{}
+
+	err = db.Select(&messages, "SELECT m.id, m.content, m.created_at, u.name, u.display_name, u.avatar_icon FROM message m INNER JOIN user u ON u.id = m.user_id WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?", chID, N, (page-1)*N)
+
 	if err != nil {
 		return err
 	}
 
 	mjson := make([]map[string]interface{}, 0)
 	for i := len(messages) - 1; i >= 0; i-- {
-		r, err := jsonifyMessage(messages[i])
-		if err != nil {
-			return err
+		m := messages[i]
+		r := make(map[string]interface{})
+		r["id"] = m.ID
+		r["user"] = User{
+			Name:        m.UserName,
+			DisplayName: m.UserDisplayName,
+			AvatarIcon:  m.UserAvatarIcon,
 		}
+		r["date"] = m.CreatedAt.Format("2006/01/02 15:04:05")
+		r["content"] = m.Content
 		mjson = append(mjson, r)
 	}
 
