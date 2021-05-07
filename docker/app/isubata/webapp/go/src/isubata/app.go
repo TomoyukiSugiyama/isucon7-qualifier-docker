@@ -746,6 +746,16 @@ func postProfile(c echo.Context) error {
 func getIcon(c echo.Context) error {
 
 	name := c.Param("file_name")
+
+	c.Response().Header().Set("Cache-Control", "public, max-age=31536000")
+	c.Response().Header().Set("ETag", name[0:len(name)-4])
+	c.Response().Header().Set("Last-Modified", "Fri, 06 May 2021 16:04:32 GMT")
+
+	if c.Request().Header.Get("If-Modified-Since") != "" || c.Request().Header.Get("If-None-Match") != "" {
+		//log.Println("request : 304")
+		return c.NoContent(304)
+	}
+
 	data, err := getKey(name, ctx)
 
 	if err != nil {
