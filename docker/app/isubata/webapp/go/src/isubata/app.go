@@ -572,7 +572,7 @@ func getHistory(c echo.Context) error {
 
 	messages := []MessageWithUser{}
 
-	err = db.Select(&messages, "SELECT m.id, m.content, m.created_at, u.name, u.display_name, u.avatar_icon FROM message m INNER JOIN user u ON u.id = m.user_id WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?", chID, N, (page-1)*N)
+	err = db.Select(&messages, "SELECT m.id, m.content, m.created_at, u.name, u.display_name, u.avatar_icon FROM message m INNER JOIN user u ON u.id = m.user_id WHERE m.channel_id = ? ORDER BY m.id DESC LIMIT ? OFFSET ?", chID, N, (page-1)*N)
 
 	if err != nil {
 		return err
@@ -789,9 +789,9 @@ func tRange(a, b int64) []int64 {
 }
 
 func main() {
-	go func() {
-		log.Println(http.ListenAndServe(":6060", nil))
-	}()
+	//go func() {
+	//	log.Println(http.ListenAndServe(":6060", nil))
+	//}()
 
 	e := echo.New()
 	funcs := template.FuncMap{
